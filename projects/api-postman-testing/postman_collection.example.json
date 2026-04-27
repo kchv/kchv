@@ -1,0 +1,190 @@
+{
+  "info": {
+    "name": "Демо-магазин API - портфолио",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Авторизация - успешный вход",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "login"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"qa.user@example.test\",\n  \"password\": \"Password123\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус ответа 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"В ответе есть поля токенов\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.accessToken).to.be.a(\"string\").and.not.empty;",
+              "  pm.expect(json.refreshToken).to.be.a(\"string\").and.not.empty;",
+              "  pm.expect(json.expiresIn).to.be.a(\"number\");",
+              "  pm.environment.set(\"accessToken\", json.accessToken);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Каталог - получение списка товаров",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/products?page=1&limit=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["products"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус ответа 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Контракт ответа со списком товаров\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.items).to.be.an(\"array\");",
+              "  pm.expect(json.total).to.be.a(\"number\");",
+              "  if (json.items.length > 0) {",
+              "    pm.expect(json.items[0]).to.include.keys(\"id\", \"name\", \"price\", \"currency\", \"stock\");",
+              "    pm.environment.set(\"productId\", json.items[0].id);",
+              "  }",
+              "});",
+              "",
+              "pm.test(\"Время ответа меньше 1000 мс\", function () {",
+              "  pm.expect(pm.response.responseTime).to.be.below(1000);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Корзина - добавление товара",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/cart/items",
+          "host": ["{{baseUrl}}"],
+          "path": ["cart", "items"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 1\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус ответа 201\", function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Позиция корзины создана\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.itemId).to.be.a(\"string\").and.not.empty;",
+              "  pm.expect(json.quantity).to.eql(1);",
+              "  pm.environment.set(\"itemId\", json.itemId);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Заказы - создание заказа",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/orders",
+          "host": ["{{baseUrl}}"],
+          "path": ["orders"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deliveryType\": \"pickup\",\n  \"paymentType\": \"card\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Статус ответа 201\", function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"У заказа корректный статус и сумма\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.id).to.be.a(\"string\").and.not.empty;",
+              "  pm.expect(json.status).to.eql(\"created\");",
+              "  pm.expect(json.total).to.be.a(\"number\").and.above(0);",
+              "  pm.environment.set(\"orderId\", json.id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
